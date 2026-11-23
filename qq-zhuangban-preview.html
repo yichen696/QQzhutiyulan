@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>QQ主题气泡预览</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;min-height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(160deg,#6b7ff0 0%,#7a5cc6 52%,#8a52ab 100%);
+    background-attachment:fixed;
+    color:#fff;
+    display:flex;justify-content:center;
+    overflow:hidden;
+    min-height:100vh;min-height:100dvh;
+  }
+  /* 外层容器：手机端全屏铺满，宽屏居中并撑满高度 */
+  .frame{
+    width:100%;max-width:560px;height:100vh;height:100dvh;
+    margin:0 auto;display:flex;
+  }
+  .panel{
+    flex:1;display:flex;flex-direction:column;overflow:hidden;
+    background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.28);
+    border-radius:32px;
+    box-shadow:0 8px 32px 0 rgba(31,38,135,.25);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  }
+  @media (max-width:599px){
+    .panel{border-radius:0;border:none;background:transparent;box-shadow:none;
+      backdrop-filter:none;-webkit-backdrop-filter:none}
+  }
+  @media (min-width:600px){
+    .frame{padding:14px 0}
+  }
+  .scroll{
+    flex:1;overflow-y:auto;padding:22px 16px 24px;
+    scrollbar-width:thin;
+  }
+  .scroll::-webkit-scrollbar{width:4px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:10px}
+  /* 标题 */
+  .head{text-align:center;margin-top:20px;margin-bottom:20px}
+  .head h1{margin:0 0 8px;font-size:24px;font-weight:900;letter-spacing:.5px;
+    text-shadow:0 2px 12px rgba(80,60,160,.35)}
+  .head p{margin:0;font-size:13px;color:rgba(255,255,255,.72);font-weight:300}
+  /* 切换 */
+  .tabs{display:flex;gap:12px;margin-bottom:16px}
+  .tab{
+    flex:1;padding:12px 0;border-radius:16px;font-size:15px;font-weight:600;cursor:pointer;
+    color:rgba(255,255,255,.78);
+    background:rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.3);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:all .3s ease;
+  }
+  .tab.active{
+    background:rgba(255,255,255,.42);color:#fff;
+    box-shadow:0 6px 20px rgba(31,38,135,.25), inset 0 0 12px rgba(255,255,255,.25);
+  }
+  /* 输入 */
+  .inputrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .inputwrap{
+    flex:1;display:flex;align-items:center;min-width:0;
+    background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);
+    border-radius:16px;padding:0 14px;height:50px;
+    transition:all .3s;
+  }
+  .inputwrap:focus-within{background:rgba(255,255,255,.3);box-shadow:0 0 15px rgba(255,255,255,.2)}
+  .tag{
+    font-size:11px;font-weight:700;letter-spacing:.5px;padding:4px 8px;border-radius:8px;
+    background:rgba(255,255,255,.28);color:#fff;margin-right:10px;flex:none;
+  }
+  #q{
+    flex:1;min-width:0;border:none;outline:none;background:transparent;color:#fff;
+    font-size:15px;height:100%;
+  }
+  #q::placeholder{color:rgba(255,255,255,.6)}
+  .go{
+    height:50px;padding:0 20px;border-radius:16px;border:1px solid rgba(255,255,255,.45);
+    background:rgba(255,255,255,.35);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:all .25s;
+  }
+  .go:active{transform:scale(.97);background:rgba(255,255,255,.5)}
+  .hintline{font-size:12px;color:rgba(255,255,255,.62);margin:4px 2px 16px}
+  /* 预览卡片 */
+  #result{display:none}
+  .imgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;align-items:start}
+  .imgbox{
+    border-radius:16px;overflow:hidden;margin:0;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.28);
+    box-shadow:0 8px 24px rgba(31,38,135,.18);
+    position:relative;
+  }
+  .imgbox img{display:block;width:100%;height:auto;opacity:0;transition:opacity .35s;
+    background:rgba(255,255,255,.08)}
+  .imgbox img.ok{opacity:1}
+  .cap{
+    position:absolute;left:10px;top:10px;font-size:11px;padding:4px 10px;border-radius:20px;
+    background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.22);color:#fff;
+    backdrop-filter:blur(6px);
+  }
+  .linkbtn{
+    display:block;text-align:center;text-decoration:none;margin-top:14px;margin-bottom:6px;
+    padding:14px;border-radius:16px;font-size:14px;font-weight:700;color:#fff;
+    background:rgba(255,255,255,.3);
+    border:1px solid rgba(255,255,255,.45);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 8px 24px rgba(31,38,135,.2);
+  }
+  .linkbtn:active{background:rgba(255,255,255,.45)}
+  .empty{
+    padding:22px 16px;text-align:center;font-size:13px;line-height:1.7;
+    color:rgba(255,255,255,.7);
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+    border-radius:18px;margin-bottom:12px;
+  }
+  /* 历史 */
+  .hist{margin:14px 0 4px}
+  .hist h3{margin:0 0 10px;font-size:12px;font-weight:600;color:rgba(255,255,255,.7);
+    display:flex;align-items:center;justify-content:space-between}
+  #histClear{font-size:11px;font-weight:400;color:rgba(255,255,255,.55);cursor:pointer;
+    padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.22)}
+  #histClear:active{background:rgba(255,255,255,.2)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    padding:7px 14px;border-radius:20px;font-size:12px;cursor:pointer;
+    background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.28);
+    color:rgba(255,255,255,.9);
+  }
+  .chip:active{background:rgba(255,255,255,.38)}
+  /* 功能按钮网格 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+  .gbtn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:14px 8px;border-radius:16px;text-decoration:none;font-size:14px;font-weight:600;
+    color:#fff;background:rgba(255,255,255,.2);
+    border:1px solid rgba(255,255,255,.3);
+    box-shadow:0 8px 24px rgba(31,38,135,.15);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:all .25s;
+  }
+  .gbtn:active{background:rgba(255,255,255,.38);transform:translateY(-1px)}
+  .gbtn .ico{font-size:15px;opacity:.95}
+  /* 大图 */
+  #viewer{position:fixed;inset:0;background:rgba(20,16,40,.9);display:none;
+    align-items:center;justify-content:center;z-index:60;padding:16px}
+  #viewer.on{display:flex}
+  #viewer img{max-width:100%;max-height:86vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+  .vclose{position:absolute;top:20px;right:20px;width:38px;height:38px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;cursor:pointer;
+    background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3)}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="panel">
+    <div class="scroll">
+      <div class="head">
+        <h1>QQ主题气泡预览</h1>
+        <p>QQ 个性装扮在线预览工具</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tab-theme">主题预览</button>
+        <button class="tab" id="tab-bubble">气泡预览</button>
+      </div>
+
+      <div class="inputrow">
+        <div class="inputwrap">
+          <span class="tag">ID</span>
+          <input id="q" type="number" inputmode="numeric" placeholder="输入主题 ID，如 2025001">
+        </div>
+        <button class="go" id="go">查看</button>
+      </div>
+      <div class="hintline">主题与气泡不是同一套 ID，切换后重新输入即可</div>
+
+      <div id="result"></div>
+
+      <div class="hist" id="hist" style="display:none">
+        <h3><span id="histTitle">最近查询</span><span id="histClear">清空</span></h3>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="grid">
+        <a class="gbtn" href="https://qm.qq.com/q/caAdWRSuZ2" target="_blank" rel="noopener"><span class="ico">💬</span>加入交流群</a>
+        <a class="gbtn" href="https://t.me/yichen_66" target="_blank" rel="noopener"><span class="ico">✈️</span>Telegram</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="viewer"><div class="vclose" id="vclose">✕</div><img id="vimg" alt=""></div>
+
+<script>
+(function(){
+  var mode = 'theme';
+  var tabTheme = document.getElementById('tab-theme');
+  var tabBubble = document.getElementById('tab-bubble');
+  var q = document.getElementById('q');
+  var result = document.getElementById('result');
+  var viewer = document.getElementById('viewer');
+  var vimg = document.getElementById('vimg');
+  var histBox = document.getElementById('hist');
+  var chips = document.getElementById('chips');
+
+  function setMode(m){
+    mode = m;
+    tabTheme.classList.toggle('active', m === 'theme');
+    tabBubble.classList.toggle('active', m === 'bubble');
+    q.placeholder = m === 'theme' ? '输入主题 ID，如 2025001' : '输入气泡 ID，如 2112139';
+    q.value = '';
+    result.style.display = 'none';
+    result.innerHTML = '';
+    renderHistory();
+  }
+  tabTheme.onclick = function(){ setMode('theme'); };
+  tabBubble.onclick = function(){ setMode('bubble'); };
+
+  function openViewer(src){ vimg.src = src; viewer.classList.add('on'); }
+  function closeViewer(){ viewer.classList.remove('on'); vimg.src = ''; }
+  document.getElementById('vclose').onclick = closeViewer;
+  viewer.onclick = function(e){ if (e.target === viewer) closeViewer(); };
+
+  function makeImg(src, caption, onFail){
+    var box = document.createElement('div');
+    box.className = 'imgbox';
+    var cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = caption;
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = caption;
+    img.onload = function(){ img.classList.add('ok'); };
+    img.onerror = function(){
+      if (box.parentNode) box.parentNode.removeChild(box);
+      if (typeof onFail === 'function') onFail();
+    };
+    img.onclick = function(){ openViewer(src); };
+    img.src = src;
+    box.appendChild(img);
+    box.appendChild(cap);
+    return box;
+  }
+
+  var HKEY = 'qqyulan_v2_';
+  var histTitle = document.getElementById('histTitle');
+  var histClear = document.getElementById('histClear');
+
+  function saveHistory(id){
+    var key = HKEY + mode;
+    var arr = [];
+    try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ arr = []; }
+    arr = arr.filter(function(x){ return x !== id; });
+    arr.unshift(id);
+    arr = arr.slice(0, 10);
+    try { localStorage.setItem(key, JSON.stringify(arr)); } catch(e){}
+    renderHistory();
+  }
+
+  function renderHistory(){
+    var key = HKEY + mode;
+    var arr = [];
+    try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ arr = []; }
+    arr = arr.slice(0, 10);
+    chips.innerHTML = '';
+    histTitle.textContent = '最近查询 · ' + (mode === 'theme' ? '主题' : '气泡') +
+      (arr.length ? '（' + arr.length + '/10）' : '');
+    if (!arr.length) { histBox.style.display = 'none'; return; }
+    histBox.style.display = 'block';
+    arr.forEach(function(id){
+      var c = document.createElement('div');
+      c.className = 'chip';
+      c.textContent = id;
+      c.onclick = function(){ q.value = id; search(); };
+      chips.appendChild(c);
+    });
+  }
+
+  histClear.onclick = function(){
+    try { localStorage.removeItem(HKEY + mode); } catch(e){}
+    renderHistory();
+  };
+
+  function search(){
+    var id = (q.value || '').trim();
+    if (!id) { q.focus(); return; }
+    if (!/^\d+$/.test(id)) {
+      result.style.display = 'block';
+      result.innerHTML = '<div class="empty">请输入纯数字的装扮 ID</div>';
+      return;
+    }
+
+    result.style.display = 'block';
+    result.innerHTML = '';
+    saveHistory(id);
+
+    var isTheme = (mode === 'theme');
+    var detail = document.createElement('a');
+    detail.className = 'linkbtn';
+    detail.target = '_blank';
+    detail.rel = 'noopener';
+    detail.href = 'https://zb.vip.qq.com/mall/item-detail?appid=' + (isTheme ? 3 : 2) +
+                 '&itemid=' + id + '_nav_titleclr=000000&_nav_txtclr=000000';
+    detail.textContent = isTheme ? '跳转到 QQ 查看该主题详情' : '跳转到 QQ 查看该气泡详情';
+
+    var urls = isTheme ? [
+      ['https://tianquan.gtimg.cn/theme/item/' + id + '/newPreview2.jpg', '主题预览'],
+      ['https://tianquan.gtimg.cn/theme/item/' + id + '/newPreview1.jpg', '主题预览']
+    ] : [
+      ['https://tianquan.gtimg.cn/bubble/item/' + id + '/250x300_1.png', '气泡预览'],
+      ['https://tianquan.gtimg.cn/bubble/item/' + id + '/newPreview1.png', '气泡效果'],
+      ['https://tianquan.gtimg.cn/bubble/item/' + id + '/newPreview2.png', '气泡效果']
+    ];
+
+    var grid = document.createElement('div');
+    grid.className = 'imgs';
+    var failed = 0;
+    urls.forEach(function(u, i){
+      var box = makeImg(u[0], u[1], function(){
+        failed++;
+        if (failed === urls.length) {
+          result.innerHTML = '<div class="empty">没找到这个 ID 的预览图，检查一下 ID 是否填对</div>';
+          result.appendChild(detail);
+        }
+      });
+      if (urls.length % 2 === 1 && i === urls.length - 1) {
+        box.style.gridColumn = '1 / -1';
+      }
+      grid.appendChild(box);
+    });
+    result.appendChild(grid);
+    result.appendChild(detail);
+  }
+
+  document.getElementById('go').onclick = search;
+  q.addEventListener('keydown', function(e){ if (e.key === 'Enter') search(); });
+
+  try { localStorage.removeItem('qqpreview'); } catch(e){}
+  setMode('theme');
+})();
+</script>
+</body>
+</html>
